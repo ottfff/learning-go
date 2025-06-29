@@ -152,6 +152,11 @@ if v, ok := m.Load("a"); ok { //contains
 }
 
 m.Delete(1)
+var swapped bool = m.CompareAndSwap(1, "oldValue", "newValue")
+var deleted bool = m.CompareAndDelete(1, "oldValue")
+value, keyWasPresent := m.LoadAndDelete(1)
+prevValueOrNewValue, keyWasPresent := m.LoadOrStore(1, "newValue")
+prevValueOrNil, keyWasPresent := m.Swap(3, "newValue")
 ```
 
 ## Interface
@@ -162,4 +167,132 @@ var i interface{} = 10
 var j interface{} = "10"
 v := i.(int) //ok 
 u := j.(int) //panic
+```
+
+Interfaces in go have duck typing
+```go
+type Animal interface {
+    Say() (n string, err error)
+}
+type Duck struct{}
+func (duck Duck) Say() (string, error) {
+    return "Krya", nil
+}
+
+//verify in compile stage that Duck implements Animal
+var _ Animal = (*Duck)(nil)
+```
+```go
+type any = interface {}
+
+type error interface {
+    Error() string
+}
+```
+
+Nil trap
+```go
+var i interface {} // nil
+i == nil // true
+
+// bad function. Don't return nil of certain type because returnsError() != nil
+func returnsError() error {
+    var err *MyError = nil
+    return err // interface error != nil
+}
+if returnsError() == nil { 
+	// basically such stile is good, but if you don't manage returnsError() function then better to check by reflect
+	// reflect.ValueOf(err).IsNil()
+}
+```
+
+## Concurrency
+
+### WaitGroup
+```go
+var wg sync.WaitGroup
+wg.Add(1)
+wg.Done()
+wg.Wait()
+```
+Always pass WaitGroup by pointer.
+
+### Mutex
+```go
+var mu sync.Mutex
+mu.Lock()
+mu.Unlock()
+my.TryLock()
+```
+```go
+var rwMutex sync.RWMutex
+rwMutex.Lock()
+rwMutex.Unlock()
+rwMutex.TryLock()
+rwMutex.RLock()
+rwMutex.RUnlock()
+rwMutex.TryRLock()
+rwMutex.RLocker()
+```
+
+### Pool
+```go
+type A struct {
+    name string
+}
+var pool = sync.Pool{
+    New: func() interface{} {
+        return A{name: "a0"}
+    },
+}
+o0 := pool.Get().(A) // "a0" as default value
+pool.Put(A{"a1"})
+pool.Put(A{"a2"})
+o1 := pool.Get().(A) // random value, but most likely "a1"
+o2 := pool.Get().(A) // next random value "a2"
+```
+
+### Once / OnceFunc / memoize function
+
+#### Once
+```go
+var once sync.Once // sharing value
+func f() {
+    once.Do(func() {
+        fmt.Println("Run only once")
+    })
+}
+
+f() // "Run only once"
+f() // nothing
+f() // nothing
+```
+
+#### OnceFunc
+```go
+f := sync.OnceFunc(func() {
+    fmt.Println("Run only once")
+})
+
+f() // "Run only once"
+f() // nothing
+f() // nothing
+```
+
+#### Memoize function
+To create function with cached resul use next pattern
+```go
+var once sync.Once
+var result int
+
+func getValue() int {
+    once.Do(func() {
+        fmt.Println("initializing")
+        result = 42
+    })
+    return result
+}
+
+fmt.Println(getValue()) // initialize 42
+fmt.Println(getValue()) // returns cached 42
 ```

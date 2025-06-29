@@ -29,7 +29,8 @@ func TestSyncMap(t *testing.T) {
 	m := sync.Map{} // any to any
 	m.Store("a", "1")
 	m.Store(1, "a")
-
+	v, loaded := m.Swap(3, "n")
+	fmt.Println(v, loaded)
 	if v, ok := m.Load("a"); ok {
 		fmt.Println("a =", v)
 	}
@@ -42,9 +43,4 @@ func TestSyncMap(t *testing.T) {
 		fmt.Printf("Key: %v, Value: %v\n", key, value)
 		return true // продолжить обход
 	})
-
-	var i interface{} = 10
-	var j interface{} = "10"
-	v := i.(int) // ok
-	//v2 := j.(int) // panic
 }
