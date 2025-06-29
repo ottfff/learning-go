@@ -1,5 +1,25 @@
 # Go cheat sheet
 
+## Table of Contents
+
+- [Types](#types)
+- [Zero value / Default value](#zero-value--default-value)
+- [Slice](#slice)
+- [Rune](#rune)
+- [Map](#map)
+  - [sync.Map](#syncmap)
+- [Interface](#interface)
+- [Concurrency](#concurrency)
+  - [WaitGroup](#waitgroup)
+  - [Mutex](#mutex)
+  - [Pool](#pool)
+  - [Once / OnceFunc / memoize function](#once--oncefunc--memoize-function)
+    - [Once](#once)
+    - [OnceFunc](#oncefunc)
+    - [Memoize function](#memoize-function)
+  - [Atomic](#atomic)
+  - [Semaphore](#semaphore)
+
 ## Types
 
 * **int8**
@@ -141,7 +161,14 @@ m["key"] = 1 // panic: assignment to entry in nil map
 ```
 
 ### sync.Map
+Read-optimized concurrent map.
 
+For write-optimized solution better to use map + RWMutex
+
+* read-only part 
+* dirty part
+* promotion logic.
+  Frequent reads from dirty part promote to read part.
 ```go
 m := sync.Map{} //any to any
 m.Store("a", "1")
@@ -295,4 +322,38 @@ func getValue() int {
 
 fmt.Println(getValue()) // initialize 42
 fmt.Println(getValue()) // returns cached 42
+```
+
+### Atomic
+
+| Function                                                       | Description                                |
+|----------------------------------------------------------------|--------------------------------------------|
+| `atomic.LoadInt32(addr *int32) int32`                          | read `int32`                               |
+| `atomic.StoreInt32(addr *int32, val int32)`                    | write `int32`                              |
+| `atomic.AddInt32(addr *int32, delta int32) int32`              | add `delta` and return new value           |
+| `atomic.CompareAndSwapInt32(addr *int32, old, new int32) bool` | compare and swap if equals `old` |
+| analogs `int64`, `uint32`, `uint64`, `uintptr`, `Pointer` e.g. |                                            |
+
+```go
+var counter int64 = 0
+atomic.AddInt64(&counter, 1)
+```
+
+### Semaphore
+There is no default implementations.
+Example of custom implementation:
+```go
+type Semaphore chan struct{}
+
+func NewSemaphore(max int) Semaphore {
+    return make(Semaphore, max)
+}
+
+func (s Semaphore) Acquire() {
+    s <- struct{}{} // acquiring slot
+}
+
+func (s Semaphore) Release() {
+    <-s // release the slot
+}
 ```
